@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+    <remap from="/crs/scaled_pos_traj_controller/follow_joint_trajectory" to="/crs/follow_joint_trajectory"/>
+    <include file="$(find ur_robot_driver)/launch/ur10e_bringup.launch" ns="crs">
+        <arg name="robot_ip" default="192.168.12.59"/>
+        <arg name="headless_mode" default="true"/>
+    </include>
+</launch>

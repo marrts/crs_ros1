@@ -64,13 +64,13 @@ protected:
     std::vector<std::string> start_controllers, stop_controllers;
     if (req.data) // Set to cartesian controller
     {
-      ROS_WARN("Activating joint control on the robot");
+      ROS_WARN("Activating Cartesian control on the robot");
       start_controllers.push_back(COMPLIANCE_CONTROLLER_NAME);
       stop_controllers.push_back(JOINT_CONTROLLER_NAME);
     }
     else // Set to joint controller
     {
-      ROS_WARN("Activating Cartesian control on the robot");
+      ROS_WARN("Activating joint control on the robot");
       start_controllers.push_back(JOINT_CONTROLLER_NAME);
       stop_controllers.push_back(COMPLIANCE_CONTROLLER_NAME);
     }

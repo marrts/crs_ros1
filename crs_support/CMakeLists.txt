@@ -13,6 +13,7 @@ endif()
 
 
 install(DIRECTORY
+    config
     launch
     DESTINATION ${ROS_SHARE_DESTINATION}/${PROJECT_NAME}/
 )

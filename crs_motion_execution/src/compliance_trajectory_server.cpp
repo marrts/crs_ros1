@@ -195,7 +195,7 @@ protected:
           Eigen::Vector3d pose_diff = curr_transform.translation() - prev_transform.translation();
           prev_transform = curr_transform;
           double a = 0.98;
-          if (time_diff.toSec() < 2 && pose_diff.norm() > 0)
+          if (time_diff.toSec() < 2)
             curr_speed = curr_speed * a + (pose_diff.norm() / time_diff.toSec()) * (1 - a);
 
           std_msgs::Float64 speed_msg;

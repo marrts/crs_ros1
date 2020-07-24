@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<robot name="workcell" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="ur_prefix" value="" />
+
+  <!-- Xacro for the table -->
+  <xacro:include filename="$(find compliance_ctrl)/support/urdf/assembly_table.xacro"/>
+
+  <!-- Xacro for UR10e -->
+  <xacro:include filename="$(find ur_e_description)/urdf/ur10e.urdf.xacro"/>
+  
+  <!-- Xacro for gripper -->
+  <xacro:include filename="$(find compliance_ctrl)/support/urdf/robotiq_gripper.xacro"/>
+
+  <!-- Static environment -->
+  <link name="world"/>
+
+  <xacro:assembly_table parent="world"/>
+
+  <!-- ROBOTS -->
+  <!-- UR -->
+  <xacro:ur10e_robot prefix="${ur_prefix}" joint_limited="false"
+    kinematics_file="${load_yaml('$(arg kinematics_config)')}"
+  />
+
+  <joint name="table_to_ur" type="fixed">
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 3.1415"/>
+    <parent link="world"/>
+    <child link="${ur_prefix}base_link"/>
+  </joint>
+
+<!--  <link name="eoat-->
+
+  <xacro:robotiq_gripper parent="${ur_prefix}tool0"/>
+  
+</robot>

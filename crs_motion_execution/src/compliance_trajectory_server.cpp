@@ -12,6 +12,7 @@
 #include <Eigen/Geometry>
 #include <eigen_conversions/eigen_msg.h>
 #include <controller_manager_msgs/SwitchController.h>
+#include <controller_manager_msgs/ListControllers.h>
 #include <std_srvs/Trigger.h>
 #include <std_srvs/SetBool.h>
 #include <std_msgs/Float64.h>
@@ -27,6 +28,7 @@ static const std::string SWITCH_CONTROLLER_TOPIC = "/controller_manager/switch_c
 static const std::string SWITCH_CONTROLLER_SERVICE = "compliance_controller_on";
 static const std::string COMPLIANCE_CONTROLLER_NAME = "pos_compliance_controller";
 static const std::string JOINT_CONTROLLER_NAME = "scaled_pos_traj_controller";
+static const std::string GET_ACTIVE_CONTROLLERS_SERVICE = "/controller_manager/list_controllers";
 
 bool checkTolerance(const geometry_msgs::Vector3& error, const geometry_msgs::Vector3& tolerance)
 {
@@ -51,6 +53,7 @@ public:
 
     controller_manager_client_ = nh.serviceClient<controller_manager_msgs::SwitchController>(SWITCH_CONTROLLER_TOPIC);
     zero_ftsensor_client_ = nh.serviceClient<std_srvs::Trigger>(ZERO_FTSENSOR_SERVICE);
+    list_controller_client_ = nh.serviceClient<controller_manager_msgs::ListControllers>(GET_ACTIVE_CONTROLLERS_SERVICE);
 
     as_.start();
 
@@ -62,22 +65,57 @@ protected:
                           std_srvs::SetBool::Response &res)
   {
     std::vector<std::string> start_controllers, stop_controllers;
+    controller_manager_msgs::ListControllers list_ctrl_request;
+    if(!list_controller_client_.waitForExistence(ros::Duration(3)))
+    {
+      ROS_ERROR("Controller manager not found");
+      res.message = "Controller manager not found";
+      res.success = false;
+      return false;
+    }
+    list_controller_client_.call(list_ctrl_request);
+    bool joint_active = false, cart_active = false;
+    for (auto ctrl : list_ctrl_request.response.controller)
+    {
+      if(ctrl.name.compare(JOINT_CONTROLLER_NAME) == 0 && ctrl.state.compare("running") == 0)
+        joint_active = true;
+      else if(ctrl.name.compare(COMPLIANCE_CONTROLLER_NAME) == 0 && ctrl.state.compare("running") == 0)
+        cart_active = true;
+    }
     if (req.data) // Set to cartesian controller
     {
+      if (!joint_active && cart_active)
+      {
+        ROS_WARN("Cartesian controller already active");
+        res.message = "Cartesian controller already active";
+        res.success = true;
+        return true;
+      }
       ROS_WARN("Activating Cartesian control on the robot");
-      start_controllers.push_back(COMPLIANCE_CONTROLLER_NAME);
-      stop_controllers.push_back(JOINT_CONTROLLER_NAME);
+      if (!cart_active)
+        start_controllers.push_back(COMPLIANCE_CONTROLLER_NAME);
+      if (joint_active)
+        stop_controllers.push_back(JOINT_CONTROLLER_NAME);
     }
     else // Set to joint controller
     {
+      if (joint_active && !cart_active)
+      {
+        ROS_WARN("Joint controller already active");
+        res.message = "Joint controller already active";
+        res.success = true;
+        return true;
+      }
       ROS_WARN("Activating joint control on the robot");
-      start_controllers.push_back(JOINT_CONTROLLER_NAME);
-      stop_controllers.push_back(COMPLIANCE_CONTROLLER_NAME);
+      if (!joint_active)
+        start_controllers.push_back(JOINT_CONTROLLER_NAME);
+      if (cart_active)
+        stop_controllers.push_back(COMPLIANCE_CONTROLLER_NAME);
     }
     controller_manager_msgs::SwitchController change_ctrl_request;
     change_ctrl_request.request.start_controllers = start_controllers;
     change_ctrl_request.request.stop_controllers = stop_controllers;
-    change_ctrl_request.request.strictness = controller_manager_msgs::SwitchController::Request::BEST_EFFORT;
+    change_ctrl_request.request.strictness = controller_manager_msgs::SwitchController::Request::STRICT;
     change_ctrl_request.request.start_asap = true;
     change_ctrl_request.request.timeout = 1.0;
     if(!controller_manager_client_.waitForExistence(ros::Duration(3)))
@@ -85,7 +123,7 @@ protected:
       ROS_ERROR("Controller manager not found");
       res.message = "Controller manager not found";
       res.success = false;
-      return true;
+      return false;
     }
     controller_manager_client_.call(change_ctrl_request);
 
@@ -94,14 +132,15 @@ protected:
     {
       res.message = "Controller successfully updated";
       res.success = true;
+      return true;
     }
     else
     {
       ROS_ERROR("Controller failed to update");
       res.message = "Controller failed to update";
       res.success = false;
+      return false;
     }
-    return true;
   }
 
   void executeCB(const cartesian_trajectory_msgs::CartesianComplianceTrajectoryGoalConstPtr &goal)
@@ -202,16 +241,15 @@ protected:
           speed_msg.data = curr_speed;
           speed_pub_.publish(speed_msg);
 
+          Eigen::Vector3d projected_error_dir = error.translation();
+          Eigen::Vector3d sub_projected = projected_error_dir.dot(curr_transform.rotation().matrix().col(2)) * curr_transform.rotation().matrix().col(2);
+          projected_error_dir -= sub_projected;
+
           // Update target frame to adjust speed and force
           if (speed_control_mode_ && i + 1 != goal->trajectory.points.size() && !in_pose_tol)
           {
             Eigen::Isometry3d virtual_targ_pose_prev_eig;
             tf::poseMsgToEigen(virtual_targ_pose_prev.pose, virtual_targ_pose_prev_eig);
-
-            Eigen::Vector3d projected_error_dir = error.translation();
-            // Third column of the rotation matrix gives you z component, this is what needs to be projected onto and then removed
-            Eigen::Vector3d sub_projected = projected_error_dir.dot(curr_transform.rotation().matrix().col(2)) * curr_transform.rotation().matrix().col(2);
-            projected_error_dir -= sub_projected;
 
             // Speed control
             projected_error_dir = projected_error_dir / projected_error_dir.norm();
@@ -220,9 +258,9 @@ protected:
             Eigen::Vector3d virtual_error = virtual_dist * projected_error_dir;
 
             // Force control
-            double force_error = target_cart_point.wrench.force.z - curr_wrench_.wrench.force.z;
-            virtual_force_dist += force_error * K_vfd;
-            virtual_error += sub_projected + virtual_force_dist * curr_transform.rotation().matrix().col(2);
+//            double force_error = target_cart_point.wrench.force.z - curr_wrench_.wrench.force.z;
+//            virtual_force_dist += force_error * K_vfd;
+//            virtual_error += sub_projected + virtual_force_dist * curr_transform.rotation().matrix().col(2);
 
             virtual_targ_pose_eig = targ_transform;
             virtual_targ_pose_eig.translation() = curr_transform.translation() + virtual_error;
@@ -240,31 +278,38 @@ protected:
           }
           else
           {
+            virtual_targ_pose_eig = targ_transform;
+            virtual_targ_pose_eig.translation() = curr_transform.translation() + projected_error_dir;
+            tf::poseEigenToMsg(virtual_targ_pose_eig, virtual_targ_pose.pose);
             if(in_pose_tol && !in_ori_tol)
               ROS_WARN("In positional tolerance but not in orientation tolerance, MAY SLOW ROBOT MOTION");
-            virtual_targ_pose = targ_pose;
-            virtual_targ_pose_prev = targ_pose;
+            virtual_targ_pose_prev = virtual_targ_pose;
             virtual_targ_wrench = targ_wrench;
             virtual_targ_wrench.header.seq = seq;
           }
 
           Eigen::AngleAxisd ang_ax(error.rotation());
           geometry_msgs::Vector3 curr_trans_error, curr_rot_error;
-          tf::vectorEigenToMsg(error.translation(), curr_trans_error);
+          tf::vectorEigenToMsg(curr_transform.rotation().matrix() * error.translation(), curr_trans_error);
           tf::vectorEigenToMsg(ang_ax.axis() * ang_ax.angle(), curr_rot_error);
-
           // If not within tolerance do nothing & if in tolerance go to next point
           if (i + 1 == goal->trajectory.points.size())
           {
             in_pose_tol = checkTolerance(curr_trans_error, goal->goal_tolerance.position_error);
             in_ori_tol = checkTolerance(curr_rot_error, goal->goal_tolerance.orientation_error);
-            in_tolerance = in_pose_tol && in_ori_tol;
+            if (i < force_waypoint_)
+              in_tolerance = in_pose_tol && in_ori_tol;
+            else
+              in_tolerance = in_pose_tol && in_ori_tol && speed_control_mode_;
           }
           else
           {
             in_pose_tol = checkTolerance(curr_trans_error, goal->path_tolerance.position_error);
             in_ori_tol = checkTolerance(curr_rot_error, goal->path_tolerance.orientation_error);
-            in_tolerance = in_pose_tol && in_ori_tol;
+            if (i < force_waypoint_)
+              in_tolerance = in_pose_tol && in_ori_tol;
+            else
+              in_tolerance = in_pose_tol && in_ori_tol && speed_control_mode_;
           }
           target_frame_pub_.publish(virtual_targ_pose);
           target_wrench_pub_.publish(virtual_targ_wrench);
@@ -366,7 +411,7 @@ protected:
   ros::Publisher target_wrench_pub_, target_frame_pub_, curr_sander_wrench_, speed_pub_;
   ros::Subscriber wrench_sub_;
   ros::ServiceServer set_controller_service_;
-  ros::ServiceClient controller_manager_client_, zero_ftsensor_client_;
+  ros::ServiceClient controller_manager_client_, zero_ftsensor_client_, list_controller_client_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener listener_;
   std::string action_name_;
@@ -376,6 +421,7 @@ protected:
   geometry_msgs::WrenchStamped curr_wrench_;
 
   bool speed_control_mode_ = false;
+  size_t force_waypoint_ = 1;
 
 };
 

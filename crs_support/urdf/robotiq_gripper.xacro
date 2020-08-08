@@ -9,7 +9,7 @@
   <xacro:macro name="robotiq_gripper" params="parent">
 
     <link name="${parent}_eoat_link">
-      <!--<visual>
+      <visual>
           <geometry>
               <mesh filename="package://crs_support/meshes/end_effector/visual/full_ee_v4.stl" />
           </geometry>
@@ -21,8 +21,8 @@
           <geometry>
               <mesh filename="package://crs_support/meshes/end_effector/collision/full_ee_v4_collision.stl" />
           </geometry>
-      </collision>-->
-      <inertial>
+      </collision>
+      <!--<inertial>
         <origin xyz="8.625E-08 -4.6583E-06 0.03145" rpy="0 0 0" />
         <origin xyz="0 0 0" rpy="0 0 0" />
         <mass value="0.22652" />
@@ -60,7 +60,7 @@
         <geometry>
           <mesh filename="package://compliance_ctrl/support/meshes/ee1.stl" />
         </geometry>
-      </collision>
+      </collision>-->
 
     </link>
 
@@ -75,22 +75,22 @@
 <!--        <origin xyz="0 0.16578 0.01902" rpy="-0.785 0 0" />-->
 <!--        <origin xyz="0 0.162 0.015" rpy="-0.785 0 0" />-->
 <!--        <origin xyz="0 0.04612 -0.03371" rpy="-2.355 0 0" />-->
-      <origin  xyz="0.0 0.0 0.00" rpy="0.0 0.0 0.0"/>
+      <origin  xyz="0.0 0.0 0.0125" rpy="0.0 0.0 0.0"/>
     </joint>
 
     <joint name="${parent}tool0_to_eoat_link" type="fixed">
         <parent link="${parent}" />
         <child link="${parent}_eoat_link" />
-        <origin xyz="0 0 0" rpy="1.57 0 -1.57" />
-<!--        <origin xyz="0 0 0" rpy="0 0 0" />-->
+<!--        <origin xyz="0 0 0" rpy="1.57 0 -1.57" />-->
+        <origin xyz="0 0 0" rpy="0 0 0" />
     </joint>
 
     <joint name="${parent}tool0_to_sander_center_link" type="fixed">
         <parent link="${parent}_eoat_link" />
         <child link="sander_intermediate_link" />
 <!--        <origin xyz="0 0.16578 0.01902" rpy="-0.785 0 0" />-->
-        <origin xyz="0 0.162 0.015" rpy="-0.785 0 0" />
-<!--        <origin xyz="0.0 -0.15497 0.17503" rpy="0.7854 0.0 0.0"/>-->
+<!--        <origin xyz="0 0.162 0.015" rpy="-0.785 0 0" />-->
+        <origin xyz="0.0 -0.15497 0.17503" rpy="0.7854 0.0 0.0"/>
 <!--        <origin xyz="0 0.04612 -0.03371" rpy="-2.355 0 0" />-->
     </joint>
 

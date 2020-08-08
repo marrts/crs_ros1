@@ -4,13 +4,13 @@
   <xacro:property name="ur_prefix" value="" />
 
   <!-- Xacro for the table -->
-  <xacro:include filename="$(find compliance_ctrl)/support/urdf/assembly_table.xacro"/>
+  <xacro:include filename="$(find crs_support_ros1)/support/urdf/assembly_table.xacro"/>
 
   <!-- Xacro for UR10e -->
   <xacro:include filename="$(find ur_e_description)/urdf/ur10e.urdf.xacro"/>
   
   <!-- Xacro for gripper -->
-  <xacro:include filename="$(find compliance_ctrl)/support/urdf/robotiq_gripper.xacro"/>
+  <xacro:include filename="$(find crs_support_ros1)/support/urdf/robotiq_gripper.xacro"/>
 
   <!-- Static environment -->
   <link name="world"/>

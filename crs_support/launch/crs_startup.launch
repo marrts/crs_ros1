@@ -54,7 +54,7 @@
   </include>
 
   <node name="compliance_traj_action" pkg="crs_motion_execution" type="compliance_trajectory_server" ns="crs"/>
-  <node name="compliance_traj_action" pkg="crs_robot_comms" type="crs_robot_comms_robot_comms_server" ns="crs"/>
+  <node name="crs_robot_comms" pkg="crs_robot_comms" type="crs_robot_comms_robot_comms_server" ns="crs"/>
 
 
 </launch>

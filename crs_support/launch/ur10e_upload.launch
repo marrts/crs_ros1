@@ -4,7 +4,7 @@
   <arg name="kinematics_config" default="$(find ur_e_description)/config/ur10e_default.yaml"/>
 
   <param unless="$(arg limited)" name="robot_description"
-    command="$(find xacro)/xacro --inorder '$(find crs_support_ros1)/urdf/workcell.urdf.xacro'
+    command="$(find xacro)/xacro --inorder '$(find crs_support_ros1)/urdf/crs.urdf.xacro'
         kinematics_config:=$(arg kinematics_config)"
     />
   <param if="$(arg limited)" name="robot_description"

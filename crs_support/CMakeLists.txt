@@ -16,5 +16,6 @@ install(DIRECTORY
     config
     launch
     urdf
+    meshes
     DESTINATION ${ROS_SHARE_DESTINATION}/${PROJECT_NAME}/
 )

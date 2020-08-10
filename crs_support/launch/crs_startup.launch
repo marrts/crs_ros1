@@ -2,7 +2,7 @@
 <launch>
   <!-- ur10e_bringup args -->
   <arg name="debug" default="false" doc="Debug flag that will get passed on to ur_common.launch"/>
-  <arg name="robot_ip" default="172.31.1.137" doc="IP address by which the robot can be reached."/> <!--WSU UR IP: 192.168.12.59-->
+  <arg name="robot_ip" default="192.168.12.59" doc="IP address by which the robot can be reached."/> <!--WSU UR IP: 192.168.12.59--> <!--SWRI UR IP: 172.31.1.137-->
   <arg name="reverse_port" default="50001" doc="Port that will be opened by the driver to allow direct communication between the driver and the robot controller."/>
   <arg name="script_sender_port" default="50002" doc="The driver will offer an interface to receive the program's URScript on this port. If the robot cannot connect to this port, `External Control` will stop immediately."/>
   <arg name="tf_prefix" default="" doc="tf_prefix used for the robot."/>

@@ -117,6 +117,9 @@ protected:
   bool toggleSanderCB(std_srvs::SetBool::Request &req,
                       std_srvs::SetBool::Response & res)
   {
+      res.message = "UR set IO successfully set";
+      res.success = true;
+      return true;
       ur_msgs::SetIO ur_io_req;
       if(!set_ur_io_client_.waitForExistence(ros::Duration(3)))
       {

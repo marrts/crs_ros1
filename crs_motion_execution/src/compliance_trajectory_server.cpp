@@ -66,7 +66,8 @@ protected:
     tf::poseMsgToEigen(goal->trajectory.tcp_offset, tcp_offset);
 
     tcp_frame = goal->trajectory.tcp_frame;
-    parent_frame = goal->trajectory.header.frame_id;
+//    parent_frame = goal->trajectory.header.frame_id;
+    parent_frame = "base_link";
     feedback_.tcp_frame = tcp_frame;
     feedback_.header = goal->trajectory.header;
 
@@ -74,7 +75,7 @@ protected:
     double virtual_dist = 0; // Distance required, perpendicular to force, to set the target frame far enough away to achieve desired speed
     double virtual_force_dist = 0; // Offset distance required, perpendicular to force, to set the target frame far enough away to achieve desired force
     double K = 0.05;  // Proportional gain applied to calculate virtual_dist
-    double K_vfd = 0.00001; // Proportional gain applied to calculate virtual_force_dist
+    double K_vfd = 0.0001; // Proportional gain applied to calculate virtual_force_dist
     double curr_speed = 0;
     geometry_msgs::TransformStamped transform_lookup;
     Eigen::Isometry3d prev_transform;
@@ -167,9 +168,9 @@ protected:
             Eigen::Vector3d virtual_error = virtual_dist * projected_error_dir;
 
             // Force control
-//            double force_error = target_cart_point.wrench.force.z - curr_wrench_.wrench.force.z;
-//            virtual_force_dist += force_error * K_vfd;
-//            virtual_error += sub_projected + virtual_force_dist * curr_transform.rotation().matrix().col(2);
+            double force_error = target_cart_point.wrench.force.z - curr_wrench_.wrench.force.z;
+            virtual_force_dist += force_error * K_vfd;
+            virtual_error += sub_projected + virtual_force_dist * curr_transform.rotation().matrix().col(2);
 
             virtual_targ_pose_eig = targ_transform;
             virtual_targ_pose_eig.translation() = curr_transform.translation() + virtual_error;
@@ -288,7 +289,7 @@ protected:
     Eigen::Isometry3d transform_eig;
     try
     {
-      transform_lookup = tf_buffer_.lookupTransform("sander_center_link", "tool0", ros::Time::now(), ros::Duration(1));
+      transform_lookup = tf_buffer_.lookupTransform("sander_center_link", msg->header.frame_id, ros::Time::now(), ros::Duration(1));
       tf::transformMsgToEigen(transform_lookup.transform, transform_eig);
     }
     catch (tf2::TransformException &ex)

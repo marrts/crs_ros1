@@ -64,6 +64,7 @@ protected:
     std::string tcp_frame, parent_frame;
     Eigen::Isometry3d tcp_offset;
     tf::poseMsgToEigen(goal->trajectory.tcp_offset, tcp_offset);
+    double curr_force = 0;
 
     tcp_frame = goal->trajectory.tcp_frame;
 //    parent_frame = goal->trajectory.header.frame_id;
@@ -75,7 +76,7 @@ protected:
     double virtual_dist = 0; // Distance required, perpendicular to force, to set the target frame far enough away to achieve desired speed
     double virtual_force_dist = 0; // Offset distance required, perpendicular to force, to set the target frame far enough away to achieve desired force
     double K = 0.05;  // Proportional gain applied to calculate virtual_dist
-    double K_vfd = 0.0001; // Proportional gain applied to calculate virtual_force_dist
+    double K_vfd = 0.00008; // Proportional gain applied to calculate virtual_force_dist
     double curr_speed = 0;
     geometry_msgs::TransformStamped transform_lookup;
     Eigen::Isometry3d prev_transform;
@@ -98,7 +99,7 @@ protected:
     targ_wrench.header.stamp = ros::Time::now();
     targ_wrench.header.seq = 0;
     targ_wrench.wrench = force;
-    target_wrench_pub_.publish(targ_wrench);
+//    target_wrench_pub_.publish(targ_wrench);
     uint seq = 0;
     geometry_msgs::PoseStamped virtual_targ_pose_prev;
     virtual_targ_pose_prev.pose = goal->trajectory.points[0].pose;
@@ -106,6 +107,10 @@ protected:
     // Iterate over each point
     for(size_t i = 0; i <goal->trajectory.points.size(); ++i)
     {
+      if (i + 1 == goal->trajectory.points.size())
+      {
+        virtual_dist = 0;
+      }
       cartesian_trajectory_msgs::CartesianTrajectoryPoint target_cart_point = goal->trajectory.points[i];
 
       // Publish target frame and force
@@ -120,11 +125,13 @@ protected:
       targ_wrench.header.stamp = ros::Time::now();
       targ_wrench.header.seq = seq;
       targ_wrench.wrench = target_cart_point.wrench;
-      target_wrench_pub_.publish(targ_wrench);
       bool in_tolerance = false;
-      bool in_pose_tol = false, in_ori_tol = false;
+      bool in_pose_tol = false, in_ori_tol = false, in_force_tol = false;
       while (!in_tolerance)
       {
+        double c = 0.95;
+        curr_force = target_cart_point.wrench.force.z * (1 - c) + curr_force * c;
+        targ_wrench.wrench.force.z = curr_force;
         seq++;
         // Check error
         geometry_msgs::TransformStamped transform_lookup;
@@ -153,13 +160,13 @@ protected:
 
           Eigen::Vector3d projected_error_dir = error.translation();
           Eigen::Vector3d sub_projected = projected_error_dir.dot(curr_transform.rotation().matrix().col(2)) * curr_transform.rotation().matrix().col(2);
-          projected_error_dir -= sub_projected;
 
           // Update target frame to adjust speed and force
+          Eigen::Isometry3d virtual_targ_pose_prev_eig;
+          tf::poseMsgToEigen(virtual_targ_pose_prev.pose, virtual_targ_pose_prev_eig);
           if (speed_control_mode_ && i + 1 != goal->trajectory.points.size() && !in_pose_tol)
           {
-            Eigen::Isometry3d virtual_targ_pose_prev_eig;
-            tf::poseMsgToEigen(virtual_targ_pose_prev.pose, virtual_targ_pose_prev_eig);
+            projected_error_dir -= sub_projected;
 
             // Speed control
             projected_error_dir = projected_error_dir / projected_error_dir.norm();
@@ -168,14 +175,21 @@ protected:
             Eigen::Vector3d virtual_error = virtual_dist * projected_error_dir;
 
             // Force control
-            double force_error = target_cart_point.wrench.force.z - curr_wrench_.wrench.force.z;
-            virtual_force_dist += force_error * K_vfd;
-            virtual_error += sub_projected + virtual_force_dist * curr_transform.rotation().matrix().col(2);
+            if (!in_force_tol)
+            {
+                double force_error = target_cart_point.wrench.force.z - curr_wrench_.wrench.force.z;
+                if (force_error < 0)
+                    force_error += goal->path_tolerance.wrench_error.force.z;
+                else
+                    force_error -= goal->path_tolerance.wrench_error.force.z;
+                virtual_force_dist += force_error * K_vfd;
+                virtual_error += virtual_force_dist * curr_transform.rotation().matrix().col(2);
+            }
 
             virtual_targ_pose_eig = targ_transform;
             virtual_targ_pose_eig.translation() = curr_transform.translation() + virtual_error;
 
-            double b = 0.0;
+            double b = 0.0005;
             virtual_targ_pose_eig.translation() = virtual_targ_pose_prev_eig.translation() * b + virtual_targ_pose_eig.translation() * (1 - b);
             tf::poseEigenToMsg(virtual_targ_pose_eig, virtual_targ_pose.pose);
             virtual_targ_pose.header.stamp = ros::Time::now();
@@ -186,13 +200,32 @@ protected:
             virtual_targ_wrench.header.seq = seq;
             target_wrench_pub_.publish(virtual_targ_wrench);
           }
+          else if (i + 1 == goal->trajectory.points.size()) // Allow for speed control in z to get off of the part
+          {
+              projected_error_dir = projected_error_dir / projected_error_dir.norm();
+              double speed_error = targ_speed - curr_speed;
+              virtual_dist += speed_error * K;
+              Eigen::Vector3d virtual_error = virtual_dist * projected_error_dir;
+
+              virtual_targ_pose_eig = targ_transform;
+              virtual_targ_pose_eig.translation() = curr_transform.translation() + virtual_error;
+
+              double b = 0.001;
+              virtual_targ_pose_eig.translation() = virtual_targ_pose_prev_eig.translation() * b + virtual_targ_pose_eig.translation() * (1 - b);
+              tf::poseEigenToMsg(virtual_targ_pose_eig, virtual_targ_pose.pose);
+          }
           else
           {
             virtual_targ_pose_eig = targ_transform;
             virtual_targ_pose_eig.translation() = curr_transform.translation() + projected_error_dir;
+            double b = 0.1;
+            virtual_targ_pose_eig.translation() = virtual_targ_pose_prev_eig.translation() * b + virtual_targ_pose_eig.translation() * (1 - b);
             tf::poseEigenToMsg(virtual_targ_pose_eig, virtual_targ_pose.pose);
             if(in_pose_tol && !in_ori_tol)
+            {
+              virtual_dist = 0;
               ROS_WARN("In positional tolerance but not in orientation tolerance, MAY SLOW ROBOT MOTION");
+            }
             virtual_targ_pose_prev = virtual_targ_pose;
             virtual_targ_wrench = targ_wrench;
             virtual_targ_wrench.header.seq = seq;
@@ -236,8 +269,10 @@ protected:
           feedback_.actual.pose = curr_pose;
           feedback_.actual.wrench = curr_wrench_.wrench;
           feedback_.actual.twist.linear.x = curr_speed;
+          Eigen::Isometry3d curr_error_eig_transformed = error;
+          curr_error_eig_transformed.translation() = curr_transform.rotation().matrix() * error.translation();
           geometry_msgs::Pose curr_error;
-          tf::poseEigenToMsg(error, curr_error);
+          tf::poseEigenToMsg(curr_error_eig_transformed, curr_error);
           feedback_.error.pose = curr_error;
           Eigen::Matrix<double, 6, 1> targ_wrench_eigen, curr_wrench_eigen, error_wrench_eigen;
           tf::wrenchMsgToEigen(curr_wrench_.wrench, curr_wrench_eigen);
@@ -252,7 +287,14 @@ protected:
           Eigen::Matrix<double, 6, 1> tolerance_wrench_eigen;
           tf::wrenchMsgToEigen(goal->path_tolerance.wrench_error, tolerance_wrench_eigen);
 
-          if (!speed_control_mode_ && checkTolerance(error_wrench.force, goal->path_tolerance.wrench_error.force))
+          if (checkTolerance(error_wrench.force, goal->path_tolerance.wrench_error.force))
+          {
+              in_force_tol = true;
+              virtual_force_dist = 0;
+          }
+          else
+              in_force_tol = false;
+          if (!speed_control_mode_ && in_force_tol)
           {
             ROS_WARN("SPEED ON");
             speed_control_mode_ = true;

@@ -157,9 +157,9 @@ pos_compliance_controller:
       trans_x: 10000
       trans_y: 10000
       trans_z: 1000
-      rot_x: 200
-      rot_y: 200
-      rot_z: 200
+      rot_x: 2000
+      rot_y: 2000
+      rot_z: 2000
    pd_gains:
       trans_x: {p: 0.0001}
       trans_y: {p: 0.0001}
@@ -180,9 +180,9 @@ vel_compliance_controller:
       trans_x: 5000
       trans_y: 5000
       trans_z: 5000
-      rot_x: 200
-      rot_y: 200
-      rot_z: 200
+      rot_x: 1000
+      rot_y: 1000
+      rot_z: 1000
    pd_gains:
       trans_x: {p: 0.001}
       trans_y: {p: 0.001}

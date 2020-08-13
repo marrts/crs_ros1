@@ -14,7 +14,7 @@ static const std::string JOINT_CONTROLLER_NAME = "scaled_pos_traj_controller";
 static const std::string GET_ACTIVE_CONTROLLERS_SERVICE = "/controller_manager/list_controllers";
 static const std::string TOGGLE_SANDER_SERVICE = "toggle_sander";
 static const std::string UR_IO_SERVICE = "/ur_hardware_interface/set_io";
-static const uint8_t SANDER_IO_PIN = 0;
+static const uint8_t SANDER_IO_PIN = 1;
 
 class CRSRobotComms
 {
@@ -117,9 +117,6 @@ protected:
   bool toggleSanderCB(std_srvs::SetBool::Request &req,
                       std_srvs::SetBool::Response & res)
   {
-      res.message = "UR set IO successfully set";
-      res.success = true;
-      return true;
       ur_msgs::SetIO ur_io_req;
       if(!set_ur_io_client_.waitForExistence(ros::Duration(3)))
       {

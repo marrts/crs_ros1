@@ -87,6 +87,9 @@ protected:
     double K_vfd = 0.00003; // Proportional gain applied to calculate virtual_force_dist
     double I_vfd = 0.000005; // Integral gain applied to calculate virtual_force_dist
     double D_vfd = 0.00005; // Derivative gain applied to calculate virtual_force_dist
+//    double K_vfd = 0.00002; // Proportional gain applied to calculate virtual_force_dist
+//    double I_vfd = 0.000015; // Integral gain applied to calculate virtual_force_dist
+//    double D_vfd = 0.00005; // Derivative gain applied to calculate virtual_force_dist
     double curr_speed = 0;
     geometry_msgs::TransformStamped transform_lookup;
     Eigen::Isometry3d prev_transform;
@@ -177,11 +180,16 @@ protected:
           speed_pub_.publish(speed_msg);
 
           Eigen::Vector3d projected_error_dir = error.translation();
-//          Eigen::Vector3d sub_projected = projected_error_dir.dot(curr_transform.rotation().matrix().col(2)) * curr_transform.rotation().matrix().col(2);
 
           // Update target frame to adjust speed and force
           Eigen::Isometry3d virtual_targ_pose_prev_eig;
           tf::poseMsgToEigen(virtual_targ_pose_prev.pose, virtual_targ_pose_prev_eig);
+
+          double force_error = target_cart_point.wrench.force.z - curr_wrench_.wrench.force.z;
+          d_force = (force_error - prev_force_error) * hz;
+          i_force += (force_error - prev_force_error) / hz;
+          prev_force_error = force_error;
+
           if (speed_control_mode_ && i + 1 != goal->trajectory.points.size() && !in_pose_tol)
           {
 //            projected_error_dir.z() = 0;
@@ -193,10 +201,6 @@ protected:
             Eigen::Vector3d virtual_error = virtual_dist * projected_error_dir;
 
             // Force control
-            double force_error = target_cart_point.wrench.force.z - curr_wrench_.wrench.force.z;
-            d_force = (force_error - prev_force_error) * hz;
-            i_force += (force_error - prev_force_error) / hz;
-            prev_force_error = force_error;
             virtual_force_dist += force_error * K_vfd + d_force * D_vfd + i_force * I_vfd;
             virtual_error.z() += virtual_force_dist;
 
@@ -260,11 +264,9 @@ protected:
           }
           else
           {
-//            virtual_force_dist = -error.translation().z();
-
             double force_error = target_cart_point.wrench.force.z - curr_wrench_.wrench.force.z;
-            virtual_force_dist += force_error * K_vfd;
             Eigen::Vector3d virtual_error = error.translation();
+            virtual_force_dist += force_error * K_vfd + d_force * D_vfd * 0 + i_force * I_vfd * 0;
             virtual_error.z() += virtual_force_dist;
 
             virtual_targ_pose_eig = targ_transform;
@@ -282,6 +284,7 @@ protected:
             virtual_targ_wrench.header.seq = seq;
           }
 
+
           Eigen::AngleAxisd ang_ax(error.rotation());
           geometry_msgs::Vector3 curr_trans_error, curr_rot_error;
           tf::vectorEigenToMsg(curr_transform.rotation().matrix() * error.translation(), curr_trans_error);
@@ -296,6 +299,7 @@ protected:
             {
                 virtual_targ_wrench.wrench.force.z = 0;
                 virtual_targ_pose_eig = curr_transform;
+                tf::poseEigenToMsg(virtual_targ_pose_eig, virtual_targ_pose.pose);
             }
           }
           else

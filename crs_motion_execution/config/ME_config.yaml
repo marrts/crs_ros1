@@ -1,0 +1,13 @@
+control_rate: 100                 # Control loop rate (hz)
+post_zero_pause: 0.5              # How long the robot pauses after zeroing force torque sensor (s)
+targ_approach_speed: 0.05         # How fast the robot tries to approach the part (m/s)
+minimum_touch_force: 3            # How much force is required to recognize the part is touched (N)
+Kp_vel: 0.05                      # Proportional gain for speed control
+Kp_vel_app: 0.075                 # Proportional gain for speed control on approach
+Kp_force: 0.00003                 # Proportional gain for force control
+Ki_force: 0.000005                # Integral gain for force control
+Kd_force: 0.00005                 # Derivative gain for force control
+target_force_filter: 0.95         # Weight of updated force based on previous force (higher -> stronger filter)
+speed_filter: 0.98                # Weight of updated speed based on previous speed
+virtual_targ_pose_filter: 0.0005  # Weight of previous virtual target pose
+wrench_filter: 0.9                # Weight of updated wrench based on previous wrench

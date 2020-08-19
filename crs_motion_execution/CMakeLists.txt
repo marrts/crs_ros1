@@ -11,9 +11,11 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_geometry_msgs
   eigen_conversions
   std_srvs
-  controller_manager_msgs)
+  controller_manager_msgs
+  roslib)
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 catkin_package(
   CATKIN_DEPENDS
@@ -34,8 +36,10 @@ add_executable(compliance_trajectory_server src/compliance_trajectory_server.cpp
 target_include_directories(compliance_trajectory_server PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include>"
-  ${EIGEN3_INCLUDE_DIRS})
+  ${EIGEN3_INCLUDE_DIRS}
+  ${YAML_CPP_INCLUDE_DIRS})
 target_link_libraries(
   compliance_trajectory_server
   ${catkin_LIBRARIES}
+  ${YAML_CPP_LIBRARIES}
 )

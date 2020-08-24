@@ -268,6 +268,17 @@ protected:
         if (curr_state.step == curr_state.MOVING && in_pose_tol && !in_ori_tol)
             curr_state.step = curr_state.CORRECTING_ORIENTATION;
 
+        if (curr_state.step == curr_state.APPROACH)
+            ROS_ERROR("APPROACH");
+        if (curr_state.step == curr_state.CONTACT_TO_SANDER_ON)
+            ROS_ERROR("CONTACT_TO_SANDER_ON");
+        if (curr_state.step == curr_state.MOVING)
+            ROS_ERROR("MOVING");
+        if (curr_state.step == curr_state.CORRECTING_ORIENTATION)
+            ROS_ERROR("CORRECTING_ORIENTATION");
+        if (curr_state.step == curr_state.RETREAT)
+            ROS_ERROR("RETREAT");
+
         seq++; // Update sequence count
 
         if (curr_wrench_.wrench.force.z >= config_.minimum_touch_force)

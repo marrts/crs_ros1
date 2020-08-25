@@ -268,17 +268,6 @@ protected:
         if (curr_state.step == curr_state.MOVING && in_pose_tol && !in_ori_tol)
             curr_state.step = curr_state.CORRECTING_ORIENTATION;
 
-        if (curr_state.step == curr_state.APPROACH)
-            ROS_ERROR("APPROACH");
-        if (curr_state.step == curr_state.CONTACT_TO_SANDER_ON)
-            ROS_ERROR("CONTACT_TO_SANDER_ON");
-        if (curr_state.step == curr_state.MOVING)
-            ROS_ERROR("MOVING");
-        if (curr_state.step == curr_state.CORRECTING_ORIENTATION)
-            ROS_ERROR("CORRECTING_ORIENTATION");
-        if (curr_state.step == curr_state.RETREAT)
-            ROS_ERROR("RETREAT");
-
         seq++; // Update sequence count
 
         if (curr_wrench_.wrench.force.z >= config_.minimum_touch_force)
@@ -385,7 +374,7 @@ protected:
             virtual_error.z() += virtual_force_dist;
 
             // Override translational component of error with virtual error
-            virtual_targ_pose_eig.translation() = curr_transform * error_xyz;
+            virtual_targ_pose_eig.translation() = curr_transform * virtual_error;
 
             // Reset virtual distance to 0 to prevent rapid acceleration once in orientational tolerance
             if(curr_state.step == curr_state.CORRECTING_ORIENTATION)

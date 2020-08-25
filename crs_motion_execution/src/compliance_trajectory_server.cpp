@@ -346,7 +346,7 @@ protected:
 
             // Force control, apply PID control in direction of force
             virtual_force_dist += force_error * config_.Kp_force + d_force * config_.Kd_force + i_force * config_.Ki_force;
-            virtual_error.z() += virtual_force_dist;
+            virtual_error.z() = virtual_force_dist;
 
             // Override translational component of error with virtual error
             virtual_targ_pose_eig.translation() = curr_transform * virtual_error;
@@ -371,7 +371,7 @@ protected:
             // Force control, apply control in direction of force
             Eigen::Vector3d virtual_error = error.translation();
             virtual_force_dist += force_error * config_.Kp_force + d_force * config_.Kd_force * 0 + i_force * config_.Ki_force * 0;
-            virtual_error.z() += virtual_force_dist;
+            virtual_error.z() = virtual_force_dist;
 
             // Override translational component of error with virtual error
             virtual_targ_pose_eig.translation() = curr_transform * virtual_error;
@@ -513,7 +513,7 @@ protected:
     Eigen::Isometry3d transform_eig;
     try
     {
-      transform_lookup = tf_buffer_.lookupTransform("sander_center_link", msg->header.frame_id, ros::Time::now(), ros::Duration(1));
+      transform_lookup = tf_buffer_.lookupTransform("sander_center_link", "tool0", ros::Time::now(), ros::Duration(1));
       tf::transformMsgToEigen(transform_lookup.transform, transform_eig);
     }
     catch (tf2::TransformException &ex)

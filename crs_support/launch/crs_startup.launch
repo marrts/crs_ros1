@@ -2,12 +2,12 @@
 <launch>
   <!-- ur10e_bringup args -->
   <arg name="debug" default="false" doc="Debug flag that will get passed on to ur_common.launch"/>
-  <arg name="robot_ip" default="172.31.1.137" doc="IP address by which the robot can be reached."/> <!--WSU UR IP: 192.168.12.59-->
+  <arg name="robot_ip" default="192.168.12.59" doc="IP address by which the robot can be reached."/> <!--WSU UR IP: 192.168.12.59--> <!--SWRI UR IP: 172.31.1.137-->
   <arg name="reverse_port" default="50001" doc="Port that will be opened by the driver to allow direct communication between the driver and the robot controller."/>
   <arg name="script_sender_port" default="50002" doc="The driver will offer an interface to receive the program's URScript on this port. If the robot cannot connect to this port, `External Control` will stop immediately."/>
   <arg name="tf_prefix" default="" doc="tf_prefix used for the robot."/>
   <arg name="controllers" default="joint_state_controller speed_scaling_state_controller force_torque_sensor_controller scaled_pos_traj_controller" doc="Controllers that are activated by default."/>
-  <arg name="stopped_controllers" default="pos_compliance_controller" doc="Controllers that are initally loaded, but not started."/>
+  <arg name="stopped_controllers" default="pos_compliance_controller vel_compliance_controller" doc="Controllers that are initally loaded, but not started."/>
   <arg name="controller_config_file" default="$(find crs_support_ros1)/config/ur10e_controllers.yaml" doc="Config file used for defining the ROS-Control controllers."/>
   <arg name="robot_description_file" default="$(find crs_support_ros1)/launch/ur10e_upload.launch" doc="Robot description launch file."/>
   <arg name="kinematics_config" default="$(find ur_e_description)/config/ur10e_default.yaml" doc="Kinematics config file used for calibration correction. This will be used to verify the robot's calibration is matching the robot_description."/>
@@ -54,6 +54,7 @@
   </include>
 
   <node name="compliance_traj_action" pkg="crs_motion_execution" type="compliance_trajectory_server" ns="crs"/>
+  <node name="crs_robot_comms" pkg="crs_robot_comms" type="crs_robot_comms_robot_comms_server" ns="crs"/>
 
 
 </launch>

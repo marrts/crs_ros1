@@ -346,7 +346,7 @@ protected:
 
             // Force control, apply PID control in direction of force
             virtual_force_dist += force_error * config_.Kp_force + d_force * config_.Kd_force + i_force * config_.Ki_force;
-            virtual_error.z() += virtual_force_dist;
+            virtual_error.z() = virtual_force_dist;
 
             // Override translational component of error with virtual error
             virtual_targ_pose_eig.translation() = curr_transform * virtual_error;
@@ -371,10 +371,10 @@ protected:
             // Force control, apply control in direction of force
             Eigen::Vector3d virtual_error = error.translation();
             virtual_force_dist += force_error * config_.Kp_force + d_force * config_.Kd_force * 0 + i_force * config_.Ki_force * 0;
-            virtual_error.z() += virtual_force_dist;
+            virtual_error.z() = virtual_force_dist;
 
             // Override translational component of error with virtual error
-            virtual_targ_pose_eig.translation() = curr_transform * error_xyz;
+            virtual_targ_pose_eig.translation() = curr_transform * virtual_error;
 
             // Reset virtual distance to 0 to prevent rapid acceleration once in orientational tolerance
             if(curr_state.step == curr_state.CORRECTING_ORIENTATION)

@@ -365,6 +365,8 @@ protected:
 
               // Override translational component of error with virtual error
               virtual_targ_pose_eig.translation() = curr_transform * virtual_error;
+              if (in_pose_tol && !in_ori_tol)
+                  virtual_targ_pose_eig.translation() = curr_transform * error.translation();
           }
           else if (curr_state.step == curr_state.CORRECTING_ORIENTATION ||  curr_state.step == curr_state.CONTACT_TO_SANDER_ON)
           {

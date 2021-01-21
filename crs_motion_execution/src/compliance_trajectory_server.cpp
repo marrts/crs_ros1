@@ -464,7 +464,12 @@ protected:
 
           // Populate feedback msg
           feedback_.desired = target_cart_point;
-          feedback_.desired.twist.linear.x = targ_speed;
+          if (curr_state.step == curr_state.APPROACH || curr_state.step == curr_state.CONTACT_TO_SANDER_ON)
+            feedback_.desired.twist.linear.x = config_.targ_approach_speed;
+          else if (curr_state.step == curr_state.RETREAT)
+            feedback_.desired.twist.linear.x = 0;
+          else
+            feedback_.desired.twist.linear.x = targ_speed;
           geometry_msgs::Pose virtual_target_pose;
           tf::poseEigenToMsg(virtual_targ_pose_eig, virtual_target_pose);
           feedback_.virtual_desired.pose = virtual_target_pose;
@@ -515,7 +520,7 @@ protected:
     Eigen::Isometry3d transform_eig;
     try
     {
-      transform_lookup = tf_buffer_.lookupTransform("sander_center_link", msg->header.frame_id, ros::Time::now(), ros::Duration(1));
+      transform_lookup = tf_buffer_.lookupTransform("sander_center_link", "tool0", ros::Time::now(), ros::Duration(1));
       tf::transformMsgToEigen(transform_lookup.transform, transform_eig);
     }
     catch (tf2::TransformException &ex)
